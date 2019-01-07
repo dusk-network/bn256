@@ -23,12 +23,14 @@ import (
 func randomK(r io.Reader) (k *big.Int, err error) {
 	for {
 		k, err = rand.Int(r, Order)
-		if k.Sign() > 0 || err != nil {
+		if err != nil {
+			return nil, err
+		}
+
+		if k.Sign() > 0 {
 			return
 		}
 	}
-
-	return
 }
 
 // G1 is an abstract cyclic group. The zero value is suitable for use as the
@@ -116,6 +118,50 @@ func (e *G1) Marshal() []byte {
 
 	return ret
 }
+
+/*
+func (e *G1) Compress() []byte {
+	const numBytes = 256 / 8
+	e.p.MakeAffine()
+	ret := make([]byte, numBytes)
+	if e.p.IsInfinity() {
+		return ret
+	}
+	temp := &gfP{}
+
+	montDecode(temp, &e.p.x)
+	temp.Marshal(ret)
+	return ret
+}
+
+func (e *G1) Decompress(m []byte) error {
+	const numBytes = 256 / 8
+	if len(m) < numBytes {
+		return errors.New("bn256: not enough data on compressed point")
+	}
+	if e.p == nil {
+		e.p = &curvePoint{}
+	} else {
+		e.p.x = gfP{0}
+	}
+
+	zero := gfP{0}
+	e.p.x.Unmarshal(m)
+	montEncode(&e.p.x, &e.p.x)
+	if e.p.x == zero {
+		// By convention this should be the point at infinity
+		e.p.y = *newGFp(1)
+		e.p.z = gfP{0}
+		e.p.t = gfP{0}
+	} else {
+		var x3, y2 *gfP
+		gfPMul(x3, x, x)
+		gfPMul(x3, x3, x)
+		gfPAdd(y2, x3, curveB)
+		//how to implement ModSqrt on gfP?
+	}
+}
+*/
 
 // Unmarshal sets e to the result of converting the output of Marshal back into
 // a group element and then returns e.
