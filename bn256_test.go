@@ -3,11 +3,8 @@ package bn256
 import (
 	"bytes"
 	"crypto/rand"
-	"fmt"
-	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bn256"
 )
 
@@ -43,41 +40,6 @@ func TestG1Marshal(t *testing.T) {
 	if !bytes.Equal(ma, mb) {
 		t.Fatal("bytes are different")
 	}
-}
-
-func TestCompress(ti *testing.T) {
-
-	// turning curveB generator to a big.Int
-	bcurveB := make([]byte, 64)
-	curveB.Marshal(bcurveB)
-	icurveB := new(big.Int).SetBytes(bcurveB)
-
-	// creating a point in G1 (simulating a signature)
-	_, sig, err := RandomG1(rand.Reader)
-	require.NoError(ti, err)
-
-	// extracting X coordinate (compression)
-	sigb := sig.Marshal()
-	xb := sigb[0:32]
-	xi := new(big.Int).SetBytes(xb)
-
-	// reconstructing Y from X using the curve equation
-	xxx := new(big.Int).Mul(xi, xi)
-	xxx.Mul(xxx, xi)
-	t := new(big.Int).Add(xxx, icurveB)
-	y := new(big.Int).ModSqrt(t, p)
-	yb := y.Bytes()
-	fmt.Printf("%d", len(yb))
-
-	// reconstructing X,Y
-	g := append(xb, yb...)
-	g1 := new(G1)
-	g1.Unmarshal(g)
-
-	// checking that the reconstruction is successful
-	require.Equal(ti, sigb, g)
-	// crippledG1 := make([]byte, 64)
-	// copy(crippledG1, xb)
 }
 
 func TestG2(t *testing.T) {

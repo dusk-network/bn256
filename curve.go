@@ -4,13 +4,16 @@ import (
 	"math/big"
 )
 
+// B is constant of the curve
+const B = 3
+
 // curvePoint implements the elliptic curve y²=x³+3. Points are kept in Jacobian
 // form and t=z² when valid. G₁ is the set of points of this curve on GF(p).
 type curvePoint struct {
 	x, y, z, t gfP
 }
 
-var curveB = newGFp(3)
+var curveB = newGFp(B)
 
 // curveGen is the generator of G₁.
 var curveGen = &curvePoint{

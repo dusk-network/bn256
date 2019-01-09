@@ -16,6 +16,7 @@ package bn256
 import (
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 )
@@ -119,49 +120,94 @@ func (e *G1) Marshal() []byte {
 	return ret
 }
 
-/*
+func modSqrt(t *big.Int) *big.Int {
+	// l = (p+1) / 4
+	l := big.NewInt(0).Add(p, big.NewInt(1))
+	l.Div(l, big.NewInt(4))
+
+	// p should be 3 mod 4 -- computing the slow version intentionally
+	return big.NewInt(0).Exp(t, l, p)
+}
+
+// Compress G1 by dropping the Y
 func (e *G1) Compress() []byte {
-	const numBytes = 256 / 8
-	e.p.MakeAffine()
-	ret := make([]byte, numBytes)
-	if e.p.IsInfinity() {
-		return ret
-	}
-	temp := &gfP{}
+	sigb := e.Marshal()
+	fmt.Printf("%v\n", new(big.Int).SetBytes(sigb).String())
+	return sigb[0:32]
+	// const numBytes = 256 / 8
+	// e.p.MakeAffine()
+	// ret := make([]byte, numBytes)
+	// if e.p.IsInfinity() {
+	// 	return ret
+	// }
+	// temp := &gfP{}
 
-	montDecode(temp, &e.p.x)
-	temp.Marshal(ret)
-	return ret
+	// montDecode(temp, &e.p.x)
+	// temp.Marshal(ret)
+	// return ret
 }
 
-func (e *G1) Decompress(m []byte) error {
-	const numBytes = 256 / 8
-	if len(m) < numBytes {
-		return errors.New("bn256: not enough data on compressed point")
-	}
-	if e.p == nil {
-		e.p = &curvePoint{}
-	} else {
-		e.p.x = gfP{0}
+func marshal(xb []byte, y *big.Int) *G1 {
+	yb := y.Bytes()
+	g := append(xb, yb...)
+	g1 := new(G1)
+	g1.Unmarshal(g)
+	return g1
+}
+
+// Decompress unzip the Y coordinate using the curve. Y is always positive
+// TODO: use native gfP representation instead of big.Int
+func Decompress(xb []byte) (*G1, *G1, error) {
+	if len(xb) < 32 {
+		return nil, nil, errors.New("bn256: not enough data on compressed point")
 	}
 
-	zero := gfP{0}
-	e.p.x.Unmarshal(m)
-	montEncode(&e.p.x, &e.p.x)
-	if e.p.x == zero {
-		// By convention this should be the point at infinity
-		e.p.y = *newGFp(1)
-		e.p.z = gfP{0}
-		e.p.t = gfP{0}
-	} else {
-		var x3, y2 *gfP
-		gfPMul(x3, x, x)
-		gfPMul(x3, x3, x)
-		gfPAdd(y2, x3, curveB)
-		//how to implement ModSqrt on gfP?
+	xi := new(big.Int).SetBytes(xb)
+
+	// reconstructing Y from X using the curve equation
+	xxx := new(big.Int).Mul(xi, xi)
+	xxx.Mul(xxx, xi)
+
+	t := new(big.Int).Add(xxx, big.NewInt(B))
+	y1, y2, ok := cipolla(*t, *p)
+	if !ok {
+		return nil, nil, errors.New("bn256: Cannot decompress")
 	}
+
+	return marshal(xb, &y1), marshal(xb, &y2), nil
+
+	// y := new(big.Int).ModSqrt(t, p)
+	// y := modSqrt(t)
+
+	// if y == nil {
+	// 	return errors.New("bn256: x³ + 3 is not a square mod p")
+	// }
+
+	/*
+		if e.p == nil {
+			e.p = &curvePoint{}
+		} else {
+			e.p.x = gfP{0}
+		}
+
+		zero := gfP{0}
+		e.p.x.Unmarshal(m)
+		montEncode(&e.p.x, &e.p.x)
+		if e.p.x == zero {
+			// By convention this should be the point at infinity
+			e.p.y = *newGFp(1)
+			e.p.z = gfP{0}
+			e.p.t = gfP{0}
+		} else {
+			var x3, y2 *gfP
+			gfPMul(x3, x, x)
+			gfPMul(x3, x3, x)
+			gfPAdd(y2, x3, curveB)
+			//how to implement ModSqrt on gfP?
+		}
+	*/
+
 }
-*/
 
 // Unmarshal sets e to the result of converting the output of Marshal back into
 // a group element and then returns e.
