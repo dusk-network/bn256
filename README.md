@@ -32,7 +32,7 @@ BenchmarkGT-4        	    1000	   1267811 ns/op
 BenchmarkPairing-4   	    1000	   1630584 ns/op
 ```
 
-branch `lattices`:
+branch `lattices`: *NB, this branch has not been migrated from original CF repo*
 ```
 BenchmarkG1-4        	   20000	     92198 ns/op
 BenchmarkG2-4        	    5000	    340622 ns/op
