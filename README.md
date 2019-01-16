@@ -17,6 +17,11 @@ Barreto-Naehrig curve as described in
 http://cryptojedi.org/papers/dclxvi-20100714.pdf. Its output is compatible with
 the implementation described in that paper.
 
+It also includes functionalities for point compression and decompression into 
+a 33 byte representation. The additional byte includes information to resolve 
+the ambiguity of calculating the Y coordinate from X coordinate using the curve 
+equation
+
 ### Benchmarks
 
 branch `master`:
