@@ -16,6 +16,7 @@ package bn256
 import (
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 )
@@ -119,22 +120,63 @@ func (e *G1) Marshal() []byte {
 	return ret
 }
 
-// Compress G1 by dropping the Y
+// Compress G1 by dropping the Y (but retaining its most significant non-zero byte). It returns a [33]byte
 func (e *G1) Compress() []byte {
 	eb := e.Marshal()
+	y := new(big.Int).SetBytes(eb[32:])
+
+	//trying to reconstruct the Y directly to solve the ambiguity of the sign
+	y1, y2, _ := xToY(eb)
+	smaller := y1.Cmp(y2) < 0
+
+	// the Compressor first tries the Cipolla algorithm
+	// to see which solution actually equates to Y
+	if y.Cmp(y1) == 0 {
+		if smaller {
+			eb[32] = 0x00
+		} else {
+			eb[32] = 0x01
+		}
+	} else if smaller {
+		eb[32] = 0x01
+	} else {
+		eb[32] = 0x00
+	}
+
+	//appending to X the information about which nr to pick for Y
+	//if the smaller or the bigger
 	return eb[0:33]
 }
 
-func marshal(xb []byte, y *big.Int) *G1 {
-	yb := y.Bytes()
-	if yb[0] != xb[32] {
-		return nil
-	}
+func marshal(xb []byte, yi *big.Int) *G1 {
+	yb := yi.Bytes()
 
-	g := append(xb[0:32], yb...)
+	// padding the byte array
+	padding := make([]byte, 32-len(yb))
+	y := append(padding, yb...)
+	g := append(xb[0:32], y...)
 	g1 := new(G1)
 	g1.Unmarshal(g)
 	return g1
+}
+
+// xToY reconstructs Y from X using the curve equation.
+// it provides two solutions
+func xToY(xb []byte) (*big.Int, *big.Int, bool) {
+	xi := new(big.Int).SetBytes(xb[0:32])
+	x3 := new(big.Int).Mul(xi, xi)
+	x3.Mul(x3, xi)
+
+	t := new(big.Int).Add(x3, big.NewInt(B))
+	y1 := new(big.Int).ModSqrt(t, p)
+	if y1 == nil {
+		return nil, nil, false
+	}
+
+	y2 := new(big.Int).Sub(p, y1)
+	return y1, y2, true
+	// yp1, yp2, ok := cipolla(*t, *p)
+	// return &yp1, &yp2, ok
 }
 
 // Decompress unzip the Y coordinate using the curve. Y is always positive
@@ -144,26 +186,46 @@ func Decompress(xb []byte) (*G1, error) {
 		return nil, errors.New("bn256: not enough data on compressed point")
 	}
 
-	xi := new(big.Int).SetBytes(xb[0:32])
-
-	// reconstructing Y from X using the curve equation
-	xxx := new(big.Int).Mul(xi, xi)
-	xxx.Mul(xxx, xi)
-
-	t := new(big.Int).Add(xxx, big.NewInt(B))
-	yp1, yp2, ok := cipolla(*t, *p)
-	y1, y2 := &yp1, &yp2
+	// TODO: we need to make sure that cipolla's results are always in the same order
+	y1, y2, ok := xToY(xb)
 
 	if !ok {
 		return nil, errors.New("bn256: Cannot decompress")
 	}
 
-	g := marshal(xb, y1)
-	if g != nil {
-		return g, nil
+	smaller := y1.Cmp(y2) < 0
+	if xb[32] == 0x00 && smaller {
+		return marshal(xb, y1), nil
 	}
 
-	return marshal(xb, y2), nil
+	if xb[32] == 0x01 && smaller {
+		return marshal(xb, y2), nil
+	}
+
+	if xb[32] == 0x00 {
+		return marshal(xb, y2), nil
+	}
+
+	return marshal(xb, y1), nil
+}
+
+// DecompressAmbiguous returns both solutions to the decompression function
+func DecompressAmbiguous(xb []byte) (*G1, *G1, error) {
+	if len(xb) != 33 {
+		return nil, nil, errors.New("bn256: not enough data on compressed point")
+	}
+
+	y1, y2, ok := xToY(xb)
+
+	if !ok {
+		return nil, nil, errors.New("bn256: Cannot decompress")
+	}
+
+	if y1 == nil && y2 == nil {
+		fmt.Printf("%v\n", new(big.Int).SetBytes(xb).String())
+	}
+
+	return marshal(xb, y1), marshal(xb, y2), nil
 }
 
 // Unmarshal sets e to the result of converting the output of Marshal back into
