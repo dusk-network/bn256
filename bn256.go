@@ -125,22 +125,13 @@ func (e *G1) Compress() []byte {
 	eb := e.Marshal()
 	y := new(big.Int).SetBytes(eb[32:])
 
-	//trying to reconstruct the Y directly to solve the ambiguity of the sign
-	y1, y2, _ := xToY(eb)
-	smaller := y1.Cmp(y2) < 0
-
-	// the Compressor first tries the Cipolla algorithm
-	// to see which solution actually equates to Y
-	if y.Cmp(y1) == 0 {
-		if smaller {
-			eb[32] = 0x00
-		} else {
-			eb[32] = 0x01
-		}
-	} else if smaller {
-		eb[32] = 0x01
-	} else {
+	// calculating the other possible solution of y²=x³+3
+	y2 := new(big.Int).Sub(p, y)
+	// if the specular solution is a bigger nr. we encode 0x00
+	if y.Cmp(y2) < 0 {
 		eb[32] = 0x00
+	} else { // the specular solution is lower
+		eb[32] = 0x01
 	}
 
 	//appending to X the information about which nr to pick for Y
