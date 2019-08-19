@@ -14,7 +14,7 @@ type gfP12 struct {
 	x, y gfP6 // value is xω + y
 }
 
-var gfP12Gen *gfP12 = &gfP12{
+var gfP12Gen = &gfP12{
 	x: gfP6{
 		x: gfP2{
 			x: gfP{0x62d608d6bb67a4fb, 0x9a66ec93f0c2032f, 0x5391628e924e1a34, 0x2162dbf7de801d0e},
@@ -151,6 +151,40 @@ func (c *gfP12) Exp(a *gfP12, power *big.Int) *gfP12 {
 			sum.Mul(t, a)
 		} else {
 			sum.Set(t)
+		}
+	}
+
+	c.Set(sum)
+	return c
+}
+
+func (c *gfP12) latticeExp(a *gfP12, power *big.Int) *gfP12 {
+	base := [1 << 2]*gfP12{&gfP12{}, &gfP12{}, &gfP12{}, &gfP12{}}
+	base[0].Set(a)
+	base[1].Frobenius(base[0])
+	base[2].FrobeniusP2(base[0])
+	base[3].Frobenius(base[2])
+
+	precomp := [1 << 4]*gfP12{}
+	targetLattice.Precompute(func(i, j uint) {
+		if precomp[j] == nil {
+			precomp[j] = &gfP12{}
+			precomp[j].SetOne()
+		}
+		precomp[j].Mul(precomp[j], base[i])
+	})
+	multiPower := targetLattice.Multi(power)
+
+	sum := &gfP12{}
+	sum.SetOne()
+	t := &gfP12{}
+
+	for i := len(multiPower) - 1; i >= 0; i-- {
+		t.Square(sum)
+		if multiPower[i] == 0 {
+			sum.Set(t)
+		} else {
+			sum.Mul(t, precomp[multiPower[i]])
 		}
 	}
 

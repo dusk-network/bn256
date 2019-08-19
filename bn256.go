@@ -11,6 +11,10 @@
 // Barreto-Naehrig curve as described in
 // http://cryptojedi.org/papers/dclxvi-20100714.pdf. Its output is compatible
 // with the implementation described in that paper.
+//
+// This package previously claimed to operate at a 128-bit security level.
+// However, recent improvements in attacks mean that is no longer true. See
+// https://moderncrypto.org/mail-archive/curves/2016/000740.html.
 package bn256
 
 import (
@@ -50,8 +54,8 @@ func RandomG1(r io.Reader) (*big.Int, *G1, error) {
 	return k, new(G1).ScalarBaseMult(k), nil
 }
 
-func (g *G1) String() string {
-	return "bn256.G1" + g.p.String()
+func (e *G1) String() string {
+	return "bn256.G1" + e.p.String()
 }
 
 // ScalarBaseMult sets e to g*k where g is the generator of the group and then
@@ -104,6 +108,11 @@ func (e *G1) Set(a *G1) *G1 {
 func (e *G1) Marshal() []byte {
 	// Each value is a 256-bit number.
 	const numBytes = 256 / 8
+
+	// removed from the branch
+	// if e.p == nil {
+	// 	e.p = &curvePoint{}
+	// }
 
 	e.p.MakeAffine()
 	ret := make([]byte, numBytes*2)
@@ -428,8 +437,8 @@ func Miller(g1 *G1, g2 *G2) *GT {
 	return &GT{miller(g2.p, g1.p)}
 }
 
-func (g *GT) String() string {
-	return "bn256.GT" + g.p.String()
+func (e *GT) String() string {
+	return "bn256.GT" + e.p.String()
 }
 
 // ScalarBaseMult sets e to g*k where g is the generator of the group and then
@@ -438,12 +447,22 @@ func (e *GT) ScalarBaseMult(k *big.Int) *GT {
 	if e.p == nil {
 		e.p = &gfP12{}
 	}
-	e.p.Exp(gfP12Gen, k)
+	e.p.latticeExp(gfP12Gen, k)
 	return e
 }
 
-// ScalarMult sets e to a*k and then returns e.
+// ScalarMult sets e to a*k and then returns e. (If e is not guaranteed to be an element of the group because it is the
+// output of Miller(), use ScalarMultSimple.)
 func (e *GT) ScalarMult(a *GT, k *big.Int) *GT {
+	if e.p == nil {
+		e.p = &gfP12{}
+	}
+	e.p.latticeExp(a.p, k)
+	return e
+}
+
+// ScalarMultSimple sets e to a*k and then returns e.
+func (e *GT) ScalarMultSimple(a *GT, k *big.Int) *GT {
 	if e.p == nil {
 		e.p = &gfP12{}
 	}
@@ -489,6 +508,11 @@ func (e *GT) Finalize() *GT {
 func (e *GT) Marshal() []byte {
 	// Each value is a 256-bit number.
 	const numBytes = 256 / 8
+
+	if e.p == nil {
+		e.p = &gfP12{}
+		e.p.SetOne()
+	}
 
 	ret := make([]byte, numBytes*12)
 	temp := &gfP{}
