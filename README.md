@@ -24,15 +24,34 @@ equation
 
 ### Benchmarks
 
-branch `master`:
+*Specs*
+
 ```
-BenchmarkG1-4        	   10000	    154995 ns/op
-BenchmarkG2-4        	    3000	    541503 ns/op
-BenchmarkGT-4        	    1000	   1267811 ns/op
-BenchmarkPairing-4   	    1000	   1630584 ns/op
+memory         15GiB System memory
+processor      Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+bridge         Xeon E3-1200 v6/7th Gen Core Processor Host Bridge/DRAM Registers
 ```
 
-official version:
+*Lattices Branch*
+
+```
+BenchmarkG1-8              20000             77906 ns/op
+BenchmarkG2-8               5000            269775 ns/op
+BenchmarkGT-8               3000            508216 ns/op
+BenchmarkPairing-8          1000           1299645 ns/op
+```
+
+*Master Branch*
+
+```
+BenchmarkG1-8              10000            121665 ns/op
+BenchmarkG2-8               3000            435977 ns/op
+BenchmarkGT-8               2000           1026991 ns/op
+BenchmarkPairing-8          1000           1301513 ns/op
+```
+
+* official version (as reported by Cloudflare on non-specified hardware)*
+
 ```
 BenchmarkG1-4        	    1000	   2268491 ns/op
 BenchmarkG2-4        	     300	   7227637 ns/op
@@ -42,5 +61,5 @@ BenchmarkPairing-4   	      50	  20296164 ns/op
 
 ### Note
 The original Clouflare's repository includes a `lattice` branch for non-commercial 
-use which benchmarks ~10 times faster than the `official version`. Such branch has not 
-been migrated to this repository yet.
+use which benchmarks significantly faster than both the `official golang version` and the master branch. 
+The `lattices` branch is for non-commercial use only.
