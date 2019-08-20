@@ -50,7 +50,7 @@ BenchmarkGT-8               2000           1026991 ns/op
 BenchmarkPairing-8          1000           1301513 ns/op
 ```
 
-* official version (as reported by Cloudflare on non-specified hardware)*
+*Official version (as reported by Cloudflare on non-specified hardware)*
 
 ```
 BenchmarkG1-4        	    1000	   2268491 ns/op
