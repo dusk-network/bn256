@@ -24,7 +24,8 @@ equation
 
 ### Benchmarks
 
-branch `master`:
+#### This library
+
 ```
 BenchmarkG1-4        	   10000	    154995 ns/op
 BenchmarkG2-4        	    3000	    541503 ns/op
@@ -32,7 +33,7 @@ BenchmarkGT-4        	    1000	   1267811 ns/op
 BenchmarkPairing-4   	    1000	   1630584 ns/op
 ```
 
-official version:
+#### Golang version:
 ```
 BenchmarkG1-4        	    1000	   2268491 ns/op
 BenchmarkG2-4        	     300	   7227637 ns/op
@@ -42,5 +43,5 @@ BenchmarkPairing-4   	      50	  20296164 ns/op
 
 ### Note
 The original Clouflare's repository includes a `lattice` branch for non-commercial 
-use which benchmarks ~10 times faster than the `official version`. Such branch has not 
-been migrated to this repository yet.
+use which benchmarks showing a significanlt faster than the `official version`. Such branch has 
+been migrated as well.
