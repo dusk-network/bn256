@@ -163,6 +163,17 @@ func TestTripartiteDiffieHellman(t *testing.T) {
 	}
 }
 
+func BenchmarkCompressG1(b *testing.B) {
+	x, _ := rand.Int(rand.Reader, Order)
+	g1 := new(G1).ScalarBaseMult(x)
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		g1.Compress()
+	}
+}
+
 func BenchmarkG1(b *testing.B) {
 	x, _ := rand.Int(rand.Reader, Order)
 	b.ResetTimer()
