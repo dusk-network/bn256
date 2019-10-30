@@ -51,7 +51,6 @@ func TestG2(t *testing.T) {
 
 	Gb := new(bn256.G2).ScalarBaseMult(k)
 	mb := Gb.Marshal()
-	mb = append([]byte{0x01}, mb...)
 
 	if !bytes.Equal(ma, mb) {
 		t.Fatal("bytes are different")
@@ -77,18 +76,18 @@ func TestG2Marshal(t *testing.T) {
 	}
 }
 
-func TestGT(t *testing.T) {
-	k, Ga, err := RandomGT(rand.Reader)
+func TestGTMarshall(t *testing.T) {
+	_, Ga, err := RandomGT(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ma := Ga.Marshal()
 
-	Gb, ok := new(bn256.GT).Unmarshal((&GT{gfP12Gen}).Marshal())
-	if !ok {
+	Gb := new(bn256.GT)
+    _, err = Gb.Unmarshal(ma)
+	if err != nil {
 		t.Fatal("unmarshal not ok")
 	}
-	Gb.ScalarMult(Gb, k)
 	mb := Gb.Marshal()
 
 	if !bytes.Equal(ma, mb) {
