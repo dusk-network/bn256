@@ -150,11 +150,25 @@ func (e *G1) Compress() []byte {
 
 func marshal(xb []byte, yi *big.Int) *G1 {
 	yb := yi.Bytes()
+	paddingLength := 32 - len(yb)
+	// instantiating the byte array representing G1
+	g := make([]byte, 64)
 
-	// padding the byte array
-	padding := make([]byte, 32-len(yb))
-	y := append(padding, yb...)
-	g := append(xb[0:32], y...)
+	// copy X byte representation at the beginning of G1 reconstructed slice
+	copy(g, xb)
+
+	// do we need padding?
+	if paddingLength > 0 {
+		// create a padding byte slice for Y byte representation to be 32 bytes
+		padding := make([]byte, paddingLength)
+		// padding goes at the head of the Y array
+		copy(g[32:32+paddingLength], padding)
+	}
+
+	// copy the Y byte representation to G1
+	copy(g[32+paddingLength:], yb)
+
+	// unmarshalling into a new instance of G1
 	g1 := new(G1)
 	g1.Unmarshal(g)
 	return g1
@@ -231,8 +245,8 @@ func DecompressAmbiguous(xb []byte) (*G1, *G1, error) {
 // Unmarshal sets e to the result of converting the output of Marshal back into
 // a group element and then returns e.
 func (e *G1) Unmarshal(m []byte) ([]byte, error) {
-	// Each value is a 256-bit number.
-	const numBytes = 256 / 8
+	// Each value is a 256-bit number (32 bytes).
+	const numBytes = 32
 
 	if len(m) < 2*numBytes {
 		return nil, errors.New("bn256: not enough data")
