@@ -150,7 +150,7 @@ func marshal(xb []byte, yi *big.Int) *G1 {
 		paddingLenght := 32 - len(yb)
 		// creating a padding byte slice to reach 32bytes
 		padding := make([]byte, paddingLenght)
-		copy(g[32:paddingLenght], padding)
+		copy(g[32:32+paddingLenght], padding)
 		// copying the remaining bytes from y
 		copy(g[paddingLenght:], yb)
 	} else {
