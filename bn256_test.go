@@ -29,16 +29,47 @@ func TestG1Marshal(t *testing.T) {
 		t.Fatal(err)
 	}
 	ma := Ga.Marshal()
+	orig := make([]byte, 64)
+	copy(orig, ma)
 
 	Gb := new(G1)
-	_, err = Gb.Unmarshal(ma)
-	if err != nil {
+	if _, err = Gb.Unmarshal(ma); err != nil {
 		t.Fatal(err)
 	}
+
+	if !bytes.Equal(orig, ma) {
+		t.Fatal("unexpected mutation of input on G1.Unmarshal")
+	}
+
 	mb := Gb.Marshal()
 
 	if !bytes.Equal(ma, mb) {
 		t.Fatal("bytes are different")
+	}
+}
+
+func TestG1Compression(t *testing.T) {
+	_, Ga, err := RandomG1(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compressed := Ga.Compress()
+	orig := make([]byte, len(compressed))
+	copy(orig, compressed)
+
+	G1, err := Decompress(compressed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(compressed, orig) {
+		t.Fatal("method `Decompress([]byte)` mutates the input")
+	}
+
+	ma := Ga.Marshal()
+	m1 := G1.Marshal()
+	if !bytes.Equal(ma, m1) {
+		t.Fatal("decompressing a compressed point does not lead to the same result")
 	}
 }
 
@@ -64,12 +95,18 @@ func TestG2Marshal(t *testing.T) {
 		t.Fatal(err)
 	}
 	ma := Ga.Marshal()
+	orig := make([]byte, len(ma))
+	copy(orig, ma)
 
 	Gb := new(G2)
-	_, err = Gb.Unmarshal(ma)
-	if err != nil {
+	if _, err = Gb.Unmarshal(ma); err != nil {
 		t.Fatal(err)
 	}
+
+	if !bytes.Equal(ma, orig) {
+		t.Fatal("unexpected mutation of input on G2.Unmarshal")
+	}
+
 	mb := Gb.Marshal()
 
 	if !bytes.Equal(ma, mb) {
@@ -161,6 +198,26 @@ func TestTripartiteDiffieHellman(t *testing.T) {
 	if !bytes.Equal(k1Bytes, k2Bytes) || !bytes.Equal(k2Bytes, k3Bytes) {
 		t.Errorf("keys didn't agree")
 	}
+}
+
+func BenchmarkCompression(b *testing.B) {
+	_, Ga, _ := RandomG1(rand.Reader)
+	compressed := Ga.Compress()
+	orig := make([]byte, 32)
+	copy(orig, compressed)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// If compiler optimizations kick in, we should consider using a
+		// KeepAlive directive:
+		// see https://github.com/golang/go/issues/27400
+		// runtime.KeepAlive(Decompress(compressed))
+		Decompress(compressed)
+	}
+
+	//if !bytes.Equal(orig, compressed) {
+	//	b.FailNow()
+	//}
 }
 
 func BenchmarkG1(b *testing.B) {
