@@ -141,22 +141,23 @@ func (e *G1) Compress() []byte {
 
 func marshal(xb []byte, yi *big.Int) *G1 {
 	yb := yi.Bytes()
+	paddingLenght := 32 - len(yb)
+	// instantiating the byte array representing G1
 	g := make([]byte, 64)
+
+	// copy X byte representation at the beginning of G1 reconstructed slice
 	copy(g, xb)
 
 	// do we need padding?
-	if len(yb) < 32 {
-		// yes, padding goes at the head of the Y array
-		paddingLenght := 32 - len(yb)
-		// creating a padding byte slice to reach 32bytes
+	if paddingLenght > 0 {
+		// create a padding byte slice for Y byte representation to be 32 bytes
 		padding := make([]byte, paddingLenght)
+		// padding goes at the head of the Y array
 		copy(g[32:32+paddingLenght], padding)
-		// copying the remaining bytes from y
-		copy(g[paddingLenght:], yb)
-	} else {
-		// no need for padding
-		copy(g[32:], yb)
 	}
+
+	// copy the Y byte representation to G1
+	copy(g[32+paddingLenght:], yb)
 
 	// unmarshalling into a new instance of G1
 	g1 := new(G1)
